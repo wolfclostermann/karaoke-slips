@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Karaoke Slip Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;700&family=Barlow+Condensed:wght@400;700&family=Oswald:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Roboto+Slab:wght@400;700&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f0f13; --surface: #1a1a23; --surface2: #22222e;
+    --border: #2e2e3e; --accent: #e8ff47; --accent2: #ff6b6b;
+    --text: #e8e8f0; --text-muted: #7070a0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+  header { padding: 18px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 16px; background: var(--surface); flex-shrink: 0; }
+  header h1 { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.02em; }
+  header h1 span { color: var(--accent); }
+  .header-actions { margin-left: auto; display: flex; gap: 10px; }
+  .app-body { display: flex; flex: 1; overflow: hidden; height: calc(100vh - 61px); }
+  .sidebar { width: 320px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+  .panel-title { font-size: 0.63rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
+  .panel { display: flex; flex-direction: column; gap: 9px; }
+  .sb-label { font-size: 0.78rem; color: var(--text-muted); display: block; margin-bottom: 3px; font-weight: 600; }
+  input[type="text"], select { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 7px 10px; font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none; transition: border-color 0.15s; }
+  input[type="text"]:focus, select:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+  input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+  input[type="number"] { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 8px; font-family: 'DM Mono', monospace; font-size: 0.82rem; outline: none; width: 100%; transition: border-color 0.15s; }
+  input[type="number"]:focus { border-color: var(--accent); }
+  .margin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fields-list { display: flex; flex-direction: column; gap: 7px; }
+  .field-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; display: flex; flex-direction: column; gap: 5px; }
+  .field-item-header { display: flex; align-items: center; gap: 7px; }
+  .drag-handle { cursor: grab; color: var(--text-muted); font-size: 0.9rem; flex-shrink: 0; }
+  .drag-handle:active { cursor: grabbing; }
+  .field-label-input { flex: 1; background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text); font-family: 'Syne', sans-serif; font-size: 0.84rem; font-weight: 600; padding: 2px 4px; outline: none; }
+  .field-label-input:focus { border-bottom-color: var(--accent); }
+  .field-hint-input { width: 100%; background: transparent; border: none; border-bottom: 1px dashed var(--border); color: var(--text-muted); font-family: 'DM Mono', monospace; font-size: 0.74rem; padding: 2px 4px; outline: none; }
+  .field-hint-input:focus { border-bottom-color: var(--accent); }
+  .field-hint-input::placeholder { color: #444; font-style: italic; }
+  .btn-remove { background: none; border: none; color: var(--accent2); cursor: pointer; font-size: 0.85rem; padding: 2px 4px; border-radius: 4px; opacity: 0.6; transition: opacity 0.15s; flex-shrink: 0; }
+  .btn-remove:hover { opacity: 1; }
+  .btn { padding: 8px 15px; border-radius: 7px; border: none; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: all 0.15s; }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
+  .btn-add-field { background: transparent; border: 1px dashed var(--border); color: var(--text-muted); border-radius: 7px; padding: 7px; font-family: 'Syne', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.15s; text-align: center; }
+  .btn-add-field:hover { border-color: var(--accent); color: var(--accent); }
+  .back-type-tabs { display: flex; gap: 5px; flex-wrap: wrap; }
+  .back-tab { padding: 4px 10px; border-radius: 5px; border: 1px solid var(--border); background: none; color: var(--text-muted); font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 600; cursor: pointer; transition: all 0.12s; }
+  .back-tab.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .color-row { display: flex; gap: 8px; }
+  .color-row > div { flex: 1; }
+  input[type="color"] { width: 36px; height: 28px; border: 1px solid var(--border); border-radius: 5px; background: none; cursor: pointer; padding: 2px; }
+  hr { border: none; border-top: 1px solid var(--border); }
+  .field-item.dragging { opacity: 0.4; }
+  .field-item.drag-over { border-color: var(--accent); }
+
+  /* Preview */
+  .preview-area { flex: 1; display: flex; flex-direction: column; background: #888; background-image: repeating-linear-gradient(45deg,transparent,transparent 10px,rgba(0,0,0,0.08) 10px,rgba(0,0,0,0.08) 20px); overflow: hidden; position: relative; }
+  .preview-toolbar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(15,15,19,0.92); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; z-index: 10; backdrop-filter: blur(8px); }
+  .flip-btn { padding: 5px 14px; border-radius: 5px; border: 1px solid var(--border); background: none; color: var(--text-muted); font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.12s; }
+  .flip-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .preview-scroll { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 60px 20px 20px; }
+
+  /* Canvas wrapper — shadow only, no CSS sizing interference */
+  .canvas-wrap { display: inline-block; box-shadow: 0 8px 40px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.2); }
+  canvas { display: block; }
+
+</style>
+</head>
+<body>
+<header>
+  <h1>🎤 <span>Karaoke</span> Slip Generator</h1>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" onclick="loadJSON()" title="Load settings from JSON file">📂 Load</button>
+    <button class="btn btn-secondary btn-sm" onclick="saveJSON()" title="Save settings to JSON file">💾 Save JSON</button>
+    <button class="btn btn-secondary btn-sm" onclick="printSlips()">🖨 Print / Save PDF</button>
+  </div>
+  <input type="file" id="json-file-input" accept=".json" style="display:none" onchange="onJSONFileChosen(this)">
+</header>
+
+<div class="app-body">
+  <aside class="sidebar">
+
+    <div class="panel">
+      <div class="panel-title">Slip Title</div>
+      <div><span class="sb-label">Title text</span><input type="text" id="slip-title" value="Karaoke Request" oninput="render()"></div>
+      <div class="color-row">
+        <div><span class="sb-label">Title BG</span><input type="color" id="title-bg" value="#111111" oninput="render()"></div>
+        <div><span class="sb-label">Title text</span><input type="color" id="title-fg" value="#ffffff" oninput="render()"></div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="panel">
+      <div class="panel-title">Page</div>
+      <div><span class="sb-label">Size</span>
+        <select id="page-size" onchange="render()">
+          <option value="210,297">A4 (210 × 297 mm)</option>
+          <option value="148,210">A5 (148 × 210 mm)</option>
+          <option value="216,279">US Letter (8.5 × 11 in)</option>
+          <option value="216,356">US Legal (8.5 × 14 in)</option>
+          <option value="182,257">B5 (182 × 257 mm)</option>
+        </select>
+      </div>
+      <div><span class="sb-label">Orientation</span>
+        <select id="orientation" onchange="render()">
+          <option value="portrait">Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="panel">
+      <div class="panel-title">Margins (mm)</div>
+      <div class="margin-grid">
+        <div><span class="sb-label" style="font-size:.72rem">Top</span><input type="number" id="margin-top" value="10" min="0" max="60" step="1" oninput="render()"></div>
+        <div><span class="sb-label" style="font-size:.72rem">Bottom</span><input type="number" id="margin-bottom" value="10" min="0" max="60" step="1" oninput="render()"></div>
+        <div><span class="sb-label" style="font-size:.72rem">Left</span><input type="number" id="margin-left" value="10" min="0" max="60" step="1" oninput="render()"></div>
+        <div><span class="sb-label" style="font-size:.72rem">Right</span><input type="number" id="margin-right" value="10" min="0" max="60" step="1" oninput="render()"></div>
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="panel">
+      <div class="panel-title">Slips Per Page</div>
+      <span class="sb-label">Count <span id="slip-count-label" style="color:var(--accent)">12</span></span>
+      <input type="range" id="slip-count" min="1" max="30" value="12" oninput="updateSlipCount()">
+      <div style="font-size:.72rem;color:var(--text-muted)" id="grid-info"></div>
+    </div>
+
+    <hr>
+
+    <div class="panel">
+      <div class="panel-title">Typography</div>
+      <div><span class="sb-label">Title font</span>
+        <select id="title-font" onchange="persist();render()">
+          <option value="Syne">Syne</option>
+          <option value="Inter">Inter</option>
+          <option value="Barlow Condensed">Barlow Condensed</option>
+          <option value="Oswald">Oswald</option>
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Roboto Slab">Roboto Slab</option>
+          <option value="Space Mono">Space Mono</option>
+          <option value="DM Mono">DM Mono</option>
+        </select>
+      </div>
+      <div><span class="sb-label">Field label font</span>
+        <select id="label-font" onchange="persist();render()">
+          <option value="Syne">Syne</option>
+          <option value="Inter">Inter</option>
+          <option value="Barlow Condensed">Barlow Condensed</option>
+          <option value="Oswald">Oswald</option>
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Roboto Slab">Roboto Slab</option>
+          <option value="Space Mono">Space Mono</option>
+          <option value="DM Mono">DM Mono</option>
+        </select>
+      </div>
+      <div><span class="sb-label">Hint text font</span>
+        <select id="hint-font" onchange="persist();render()">
+          <option value="DM Mono">DM Mono</option>
+          <option value="Space Mono">Space Mono</option>
+          <option value="Syne">Syne</option>
+          <option value="Inter">Inter</option>
+          <option value="Barlow Condensed">Barlow Condensed</option>
+          <option value="Oswald">Oswald</option>
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Roboto Slab">Roboto Slab</option>
+        </select>
+      </div>
+      <div>
+        <span class="sb-label">Field name size <span id="label-size-val" style="color:var(--accent)">100%</span></span>
+        <input type="range" id="label-size" min="40" max="200" value="100" oninput="updateLabelSize()">
+      </div>
+      <div>
+        <span class="sb-label">Hint text size <span id="hint-size-val" style="color:var(--accent)">100%</span></span>
+        <input type="range" id="hint-size" min="40" max="200" value="100" oninput="updateHintSize()">
+      </div>
+    </div>
+
+    <hr>
+
+    <div class="panel">
+      <div class="panel-title">Fields</div>
+      <div class="fields-list" id="fields-list"></div>
+      <button class="btn-add-field" onclick="addField()">+ Add field</button>
+    </div>
+
+    <hr>
+
+    <div class="panel">
+      <div class="panel-title">Back Design</div>
+      <div class="back-type-tabs">
+        <button class="back-tab active" data-back-type="plain"  onclick="setBackType('plain',this)">Blank</button>
+        <button class="back-tab"        data-back-type="logo"   onclick="setBackType('logo',this)">Logo / Text</button>
+        <button class="back-tab"        data-back-type="grid"   onclick="setBackType('grid',this)">Grid</button>
+        <button class="back-tab"        data-back-type="lined"  onclick="setBackType('lined',this)">Lined</button>
+      </div>
+      <div id="back-logo-opts" style="display:none;flex-direction:column;gap:8px">
+        <span class="sb-label">Text (↵ for newlines)</span>
+        <textarea id="back-logo-text" placeholder="Your Pub Name&#10;🎤 Karaoke Night" oninput="render()"
+          style="min-height:70px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:.8rem;padding:8px;resize:vertical;outline:none;width:100%"></textarea>
+        <div class="color-row">
+          <div><span class="sb-label">BG</span><input type="color" id="back-logo-bg" value="#111111" oninput="render()"></div>
+          <div><span class="sb-label">Text</span><input type="color" id="back-logo-fg" value="#e8ff47" oninput="render()"></div>
+        </div>
+      </div>
+    </div>
+
+  </aside>
+
+  <div class="preview-area">
+    <div class="preview-toolbar">
+      <button class="flip-btn active" id="btn-front" onclick="showFace('front')">▣ Front</button>
+      <button class="flip-btn" id="btn-back" onclick="showFace('back')">↺ Back</button>
+    </div>
+    <div class="preview-scroll" id="preview-scroll">
+      <div class="canvas-wrap">
+        <canvas id="cv"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Default state ──
+const DEFAULTS = {
+  slipTitle:   'Karaoke Request',
+  titleBg:     '#111111',
+  titleFg:     '#ffffff',
+  pageSize:    '210,297',
+  orientation: 'portrait',
+  marginTop:    10, marginBottom: 10, marginLeft: 10, marginRight: 10,
+  slipCount:   12,
+  labelSize:   100,
+  hintSize:    100,
+  fields: [
+    { id: '_def1', label: 'Artist',    hint: 'e.g. ABBA, Elvis, Taylor Swift' },
+    { id: '_def2', label: 'Your Name', hint: 'Please write clearly!' },
+    { id: '_def3', label: 'Title',     hint: 'Song title' },
+  ],
+  titleFont:   'Syne',
+  labelFont:   'Syne',
+  hintFont:    'DM Mono',
+  backType:    'plain',
+  backLogoText: '',
+  backLogoBg:  '#111111',
+  backLogoFg:  '#e8ff47',
+};
+
+const STORAGE_KEY = 'karaoke_slips_v1';
+
+let fields = [];
+let backType = 'plain';
+let showingFace = 'front';
+let fontsReady = false;
+
+// ── Serialise current UI → plain object ──
+function getState() {
+  return {
+    slipTitle:    document.getElementById('slip-title').value,
+    titleBg:      document.getElementById('title-bg').value,
+    titleFg:      document.getElementById('title-fg').value,
+    pageSize:     document.getElementById('page-size').value,
+    orientation:  document.getElementById('orientation').value,
+    marginTop:    parseFloat(document.getElementById('margin-top').value)||0,
+    marginBottom: parseFloat(document.getElementById('margin-bottom').value)||0,
+    marginLeft:   parseFloat(document.getElementById('margin-left').value)||0,
+    marginRight:  parseFloat(document.getElementById('margin-right').value)||0,
+    slipCount:    parseInt(document.getElementById('slip-count').value),
+    labelSize:    parseInt(document.getElementById('label-size').value),
+    hintSize:     parseInt(document.getElementById('hint-size').value),
+    titleFont:    document.getElementById('title-font').value,
+    labelFont:    document.getElementById('label-font').value,
+    hintFont:     document.getElementById('hint-font').value,
+    fields:       fields.map(f => ({id:f.id, label:f.label, hint:f.hint})),
+    backType,
+    backLogoText: document.getElementById('back-logo-text')?.value || '',
+    backLogoBg:   document.getElementById('back-logo-bg')?.value  || '#111111',
+    backLogoFg:   document.getElementById('back-logo-fg')?.value  || '#e8ff47',
+  };
+}
+
+// ── Apply a state object → UI ──
+function applyState(s) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+
+  set('slip-title',   s.slipTitle);
+  set('title-bg',     s.titleBg);
+  set('title-fg',     s.titleFg);
+  set('page-size',    s.pageSize);
+  set('orientation',  s.orientation);
+  set('margin-top',   s.marginTop);
+  set('margin-bottom',s.marginBottom);
+  set('margin-left',  s.marginLeft);
+  set('margin-right', s.marginRight);
+  set('slip-count',   s.slipCount);
+  set('label-size',   s.labelSize);
+  set('hint-size',    s.hintSize);
+  set('title-font',   s.titleFont  || 'Syne');
+  set('label-font',   s.labelFont  || 'Syne');
+  set('hint-font',    s.hintFont   || 'DM Mono');
+  set('back-logo-text', s.backLogoText);
+  set('back-logo-bg', s.backLogoBg);
+  set('back-logo-fg', s.backLogoFg);
+
+  // Sync range display labels
+  document.getElementById('slip-count-label').textContent = s.slipCount;
+  document.getElementById('label-size-val').textContent   = s.labelSize + '%';
+  document.getElementById('hint-size-val').textContent    = s.hintSize  + '%';
+
+  // Fields
+  fields = (s.fields || []).map(f => ({id: f.id || uid(), label: f.label || '', hint: f.hint || ''}));
+
+  // Back type tabs
+  backType = s.backType || 'plain';
+  document.querySelectorAll('.back-tab').forEach(b => {
+    const type = b.getAttribute('data-back-type');
+    b.classList.toggle('active', type === backType);
+  });
+  const logoOpts = document.getElementById('back-logo-opts');
+  if (logoOpts) logoOpts.style.display = backType === 'logo' ? 'flex' : 'none';
+}
+
+// ── Persistence ──
+function persist() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(getState())); } catch(e) {}
+}
+
+function saveJSON() {
+  const blob = new Blob([JSON.stringify(getState(), null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'karaoke_slips.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function loadJSON() {
+  document.getElementById('json-file-input').click();
+}
+
+function onJSONFileChosen(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const s = JSON.parse(e.target.result);
+      applyState(s);
+      renderFieldsList();
+      render();
+      persist();
+    } catch(err) {
+      alert('Could not read JSON file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  input.value = ''; // reset so same file can be re-loaded
+}
+
+function uid() { return '_' + Math.random().toString(36).slice(2,9); }
+function mmToPx(mm) { return mm * 3.7795; }
+
+function getPageDims() {
+  let [w,h] = document.getElementById('page-size').value.split(',').map(Number);
+  if (document.getElementById('orientation').value === 'landscape') [w,h]=[h,w];
+  return {w,h};
+}
+function getMargins() {
+  const v = id => Math.max(0, parseFloat(document.getElementById(id).value)||0);
+  return {top:v('margin-top'),bottom:v('margin-bottom'),left:v('margin-left'),right:v('margin-right')};
+}
+function getScale() {
+  const s = document.getElementById('preview-scroll');
+  const {w,h} = getPageDims();
+  // Use device pixel ratio for crisp canvas
+  return Math.min((s.clientWidth-40)/mmToPx(w), (s.clientHeight-80)/mmToPx(h), 1);
+}
+function bestGrid(n) {
+  const {w,h} = getPageDims(); const m = getMargins();
+  const uw = w-m.left-m.right, uh = h-m.top-m.bottom;
+  let best = {cols:n,rows:1,score:Infinity};
+  for (let c=1;c<=n;c++) {
+    const r=Math.ceil(n/c);
+    if(r*c<n) continue;
+    const score=Math.abs((uw/c)/(uh/r)-2.5);
+    if(score<best.score) best={cols:c,rows:r,score};
+  }
+  return best;
+}
+
+// ── Hex colour to canvas rgba ──
+function hexToRgb(hex) {
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `rgb(${r},${g},${b})`;
+}
+
+
+// ── Cut lines between slips ──
+function drawCutLines(ctx, PW, PH, mT, mB, mL, mR, cols, rows, SW, SH, scale) {
+  const dash    = 4 * scale;
+  const gap     = 4 * scale;
+  const weight  = 0.5 * scale;
+  ctx.save();
+  ctx.strokeStyle = '#aaaaaa';
+  ctx.lineWidth   = weight;
+  ctx.setLineDash([dash, gap]);
+  ctx.lineDashOffset = 0;
+
+  // Vertical cut lines — between columns, full page height
+  for (let col = 1; col < cols; col++) {
+    const cx = mL + col * SW;
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, PH); ctx.stroke();
+  }
+
+  // Horizontal cut lines — between rows, full page width
+  for (let row = 1; row < rows; row++) {
+    const ry = mT + row * SH;
+    ctx.beginPath(); ctx.moveTo(0, ry); ctx.lineTo(PW, ry); ctx.stroke();
+  }
+
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+// ── Main render ──
+// ── Render canvas for PDF output at 300dpi ──
+function renderHighRes() {
+  const {w,h} = getPageDims();
+  const m = getMargins();
+  const DPI = 300, MPx = DPI / 25.4;
+  const PW=w*MPx, PH=h*MPx;
+  const mT=m.top*MPx, mL=m.left*MPx, mR=m.right*MPx, mB=m.bottom*MPx;
+  const UW=PW-mL-mR, UH=PH-mT-mB;
+  const count=parseInt(document.getElementById('slip-count').value);
+  const {cols,rows}=bestGrid(count);
+  const SW=UW/cols, SH=UH/rows;
+  const pc=document.createElement('canvas');
+  pc.width=Math.round(PW); pc.height=Math.round(PH);
+  const ctx=pc.getContext('2d');
+  ctx.fillStyle='#fff'; ctx.fillRect(0,0,PW,PH);
+  for(let row=0;row<rows;row++)
+    for(let col=0;col<cols;col++){
+      const idx=row*cols+col;
+      if(idx<count) drawSlipOnCtx(ctx,mL+col*SW,mT+row*SH,SW,SH,showingFace==='front');
+    }
+
+  // Cut lines — MPx scales dash/weight to 300dpi
+  drawCutLines(ctx, PW, PH, mT, mB, mL, mR, cols, rows, SW, SH, MPx);
+  return {canvas:pc, wMM:w, hMM:h};
+}
+
+// ── Print / Save as PDF ──
+function printSlips() {
+  const btn = document.querySelector('button[onclick="printSlips()"]');
+  const origLabel = btn ? btn.textContent : '';
+  if (btn) btn.textContent = '⏳ Generating…';
+
+  // Small delay so the button label update paints before the heavy canvas work
+  setTimeout(() => {
+    try {
+      const {canvas, wMM, hMM} = renderHighRes();
+      const { jsPDF } = window.jspdf;
+      const orientation = wMM > hMM ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({ unit: 'mm', format: [wMM, hMM], orientation });
+      pdf.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, wMM, hMM);
+      pdf.save('karaoke_slips.pdf');
+    } catch(err) {
+      alert('PDF generation failed: ' + err.message);
+    } finally {
+      if (btn) btn.textContent = origLabel;
+    }
+  }, 50);
+}
+
+// ── drawSlip abstracted to accept any ctx ──
+function drawSlipOnCtx(ctx, x, y, SW, SH, isFront) {
+  const title   = document.getElementById('slip-title').value;
+  const titleBg = hexToRgb(document.getElementById('title-bg').value);
+  const titleFg = hexToRgb(document.getElementById('title-fg').value);
+  const labelPct  = parseInt(document.getElementById('label-size').value)/100;
+  const hintPct   = parseInt(document.getElementById('hint-size').value)/100;
+  const titleFont = document.getElementById('title-font')?.value || 'Syne';
+  const labelFont = document.getElementById('label-font')?.value || 'Syne';
+  const hintFont  = document.getElementById('hint-font')?.value  || 'DM Mono';
+
+  const minDim  = Math.min(SW,SH);
+  const baseFs  = minDim * 0.085;
+  const headerH = minDim * 0.15;
+  const labelFs = baseFs * 0.72 * labelPct;
+  const hintFs  = baseFs * 0.68 * hintPct;
+  const pad     = labelFs * 0.5;
+  const hintPad = hintFs  * 0.4;
+  const fieldH  = (SH-headerH)/fields.length;
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x,y,SW,SH); ctx.clip();
+
+  if (isFront) {
+    ctx.fillStyle='#ffffff'; ctx.fillRect(x,y,SW,SH);
+    ctx.fillStyle=titleBg; ctx.fillRect(x,y,SW,headerH);
+    ctx.strokeStyle='#000000'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(x,y+headerH); ctx.lineTo(x+SW,y+headerH); ctx.stroke();
+    ctx.fillStyle=titleFg;
+    const titleStr = title.toUpperCase();
+    let titleFs = baseFs * 0.85;
+    ctx.font=`800 ${titleFs}px '${titleFont}',sans-serif`;
+    // Shrink font until text fits within slip width (with padding)
+    const maxTitleW = SW - pad * 4;
+    while (ctx.measureText(titleStr).width > maxTitleW && titleFs > 4) {
+      titleFs *= 0.92;
+      ctx.font=`800 ${titleFs}px '${titleFont}',sans-serif`;
+    }
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(titleStr, x+SW/2, y+headerH/2);
+
+    fields.forEach((f,fi)=>{
+      const fy=y+headerH+fi*fieldH;
+
+      // Field separator
+      ctx.strokeStyle='#333333'; ctx.lineWidth=0.75;
+      ctx.beginPath(); ctx.moveTo(x,fy+fieldH); ctx.lineTo(x+SW,fy+fieldH); ctx.stroke();
+
+      // Clip everything inside this field to its own box
+      ctx.save();
+      ctx.beginPath(); ctx.rect(x, fy, SW, fieldH); ctx.clip();
+
+      // Label — top-left corner
+      ctx.fillStyle='#111111';
+      ctx.font=`700 ${labelFs}px '${labelFont}',sans-serif`;
+      ctx.textAlign='left'; ctx.textBaseline='top';
+      ctx.fillText(f.label.toUpperCase(), x+pad, fy+pad);
+
+      // Hint — bottom-centre
+      if(f.hint){
+        ctx.fillStyle='#bbbbbb';
+        ctx.font=`italic ${hintFs}px '${hintFont}',monospace`;
+        ctx.textAlign='center'; ctx.textBaseline='bottom';
+        ctx.fillText(f.hint, x+SW/2, fy+fieldH-pad);
+      }
+
+      ctx.restore();
+    });
+  } else {
+    const logoBg = hexToRgb(document.getElementById('back-logo-bg')?.value||'#111111');
+    const logoFg = hexToRgb(document.getElementById('back-logo-fg')?.value||'#e8ff47');
+    const logoText = document.getElementById('back-logo-text')?.value||'';
+    if(backType==='plain'){
+      ctx.fillStyle='#ffffff'; ctx.fillRect(x,y,SW,SH);
+    } else if(backType==='logo'){
+      ctx.fillStyle=logoBg; ctx.fillRect(x,y,SW,SH);
+      const lines=logoText.split('\n').filter(l=>l.trim());
+      if(lines.length>0){
+        const logoFs=baseFs*1.3;
+        const lineH=logoFs*1.4;
+        const totalH=lines.length*lineH;
+        const startY=y+SH/2-totalH/2+logoFs/2;
+        ctx.fillStyle=logoFg;
+        ctx.font=`800 ${logoFs}px '${titleFont}',sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        lines.forEach((line,li)=>ctx.fillText(line,x+SW/2,startY+li*lineH));
+      }
+    } else if(backType==='grid'){
+      ctx.fillStyle='#ffffff'; ctx.fillRect(x,y,SW,SH);
+      const gs=Math.max(5,SW*0.08);
+      ctx.strokeStyle='#dddddd'; ctx.lineWidth=0.5;
+      for(let gx=x;gx<=x+SW;gx+=gs){ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx,y+SH);ctx.stroke();}
+      for(let gy=y;gy<=y+SH;gy+=gs){ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x+SW,gy);ctx.stroke();}
+    } else if(backType==='lined'){
+      ctx.fillStyle='#ffffff'; ctx.fillRect(x,y,SW,SH);
+      const lh=Math.max(10,SH*0.12);
+      ctx.strokeStyle='#cccccc'; ctx.lineWidth=0.5;
+      for(let ly=y+lh;ly<y+SH;ly+=lh){ctx.beginPath();ctx.moveTo(x,ly);ctx.lineTo(x+SW,ly);ctx.stroke();}
+    }
+  }
+  ctx.restore();
+}
+
+// And update render() to use the shared function
+function render() {
+  const {w,h}  = getPageDims();
+  const m      = getMargins();
+  const scale  = getScale();
+  const dpr    = window.devicePixelRatio || 1;
+
+  const PW=mmToPx(w)*scale, PH=mmToPx(h)*scale;
+  const mT=mmToPx(m.top)*scale,  mB=mmToPx(m.bottom)*scale;
+  const mL=mmToPx(m.left)*scale, mR=mmToPx(m.right)*scale;
+  const UW=PW-mL-mR, UH=PH-mT-mB;
+
+  const count=parseInt(document.getElementById('slip-count').value);
+  const {cols,rows}=bestGrid(count);
+  document.getElementById('grid-info').textContent=`${cols} × ${rows} grid`;
+
+  const SW=UW/cols, SH=UH/rows;
+  const cv=document.getElementById('cv');
+  cv.style.width=PW+'px'; cv.style.height=PH+'px';
+  cv.width=PW*dpr; cv.height=PH*dpr;
+
+  const ctx=cv.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,PW,PH);
+
+  for(let row=0;row<rows;row++){
+    for(let col=0;col<cols;col++){
+      const idx=row*cols+col;
+      if(idx>=count) continue;
+      drawSlipOnCtx(ctx, mL+col*SW, mT+row*SH, SW, SH, showingFace==='front');
+    }
+  }
+
+  // Cut lines
+  drawCutLines(ctx, PW, PH, mT, mB, mL, mR, cols, rows, SW, SH, scale);
+}
+
+// ── Controls ──
+function updateSlipCount() { document.getElementById('slip-count-label').textContent=document.getElementById('slip-count').value; persist(); render(); }
+function updateLabelSize()  { document.getElementById('label-size-val').textContent=document.getElementById('label-size').value+'%'; persist(); render(); }
+function updateHintSize()   { document.getElementById('hint-size-val').textContent=document.getElementById('hint-size').value+'%'; persist(); render(); }
+
+function showFace(face) {
+  showingFace=face;
+  document.getElementById('btn-front').classList.toggle('active',face==='front');
+  document.getElementById('btn-back').classList.toggle('active', face==='back');
+  render();
+}
+
+function setBackType(type,btn) {
+  backType=type;
+  document.querySelectorAll('.back-tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+  document.getElementById('back-logo-opts').style.display=type==='logo'?'flex':'none';
+  persist(); render();
+}
+
+function renderFieldsList() {
+  const list=document.getElementById('fields-list');
+  list.innerHTML='';
+  fields.forEach(f=>{
+    const el=document.createElement('div');
+    el.className='field-item'; el.draggable=true;
+    el.innerHTML=`
+      <div class="field-item-header">
+        <span class="drag-handle">⠿</span>
+        <input class="field-label-input" type="text" value="${f.label.replace(/"/g,'&quot;')}" oninput="updateField('${f.id}','label',this.value)" placeholder="Field name">
+        <button class="btn-remove" onclick="removeField('${f.id}')">✕</button>
+      </div>
+      <input class="field-hint-input" type="text" value="${f.hint.replace(/"/g,'&quot;')}" oninput="updateField('${f.id}','hint',this.value)" placeholder="Placeholder hint (optional)">`;
+    el.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',f.id);el.classList.add('dragging');});
+    el.addEventListener('dragend',()=>el.classList.remove('dragging'));
+    el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('drag-over');});
+    el.addEventListener('dragleave',()=>el.classList.remove('drag-over'));
+    el.addEventListener('drop',e=>{
+      e.preventDefault();el.classList.remove('drag-over');
+      const fid=e.dataTransfer.getData('text/plain');
+      if(fid===f.id) return;
+      const fi=fields.findIndex(x=>x.id===fid),ti=fields.findIndex(x=>x.id===f.id);
+      const[mv]=fields.splice(fi,1);fields.splice(ti,0,mv);
+      renderFieldsList(); persist(); render();
+    });
+    list.appendChild(el);
+  });
+}
+function addField()          { fields.push({id:uid(),label:'New Field',hint:''}); renderFieldsList(); persist(); render(); }
+function removeField(id)     { if(fields.length<=1)return; fields=fields.filter(f=>f.id!==id); renderFieldsList(); persist(); render(); }
+function updateField(id,k,v) { const f=fields.find(x=>x.id===id); if(f){f[k]=v; persist(); render();} }
+
+// Persist on any direct input change (covers text inputs, selects, color pickers, number inputs)
+document.addEventListener('input',  e => { if (e.target.closest('aside')) persist(); });
+document.addEventListener('change', e => { if (e.target.closest('aside')) persist(); });
+
+// ── Init: localStorage → JSON defaults → hardcoded defaults ──
+function init() {
+  let state = null;
+
+  // 1. Try localStorage
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) state = JSON.parse(stored);
+  } catch(e) {}
+
+  // 2. Fall back to hardcoded defaults
+  if (!state) state = DEFAULTS;
+
+  applyState(state);
+  renderFieldsList();
+  render();
+}
+
+document.fonts.ready.then(() => { fontsReady = true; render(); });
+const ro = new ResizeObserver(() => render());
+ro.observe(document.getElementById('preview-scroll'));
+init();
+</script>
+</body>
+</html>
