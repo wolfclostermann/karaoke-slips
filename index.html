@@ -113,6 +113,12 @@
           <option value="landscape">Landscape</option>
         </select>
       </div>
+      <div><span class="sb-label">Offset unit</span>
+        <select id="offset-unit" onchange="onOffsetUnitChange()">
+          <option value="mm">Millimeters (mm)</option>
+          <option value="in">Inches (in)</option>
+        </select>
+      </div>
     </div>
 
     <hr>
@@ -139,6 +145,16 @@
     <hr>
 
     <div id="front-panels">
+
+    <div class="panel">
+      <div class="panel-title">Front Offset <span id="front-offset-unit-label" style="color:var(--text-muted);text-transform:none;font-weight:600">(mm)</span></div>
+      <div class="margin-grid">
+        <div><span class="sb-label">Horizontal (→ right)</span><input type="number" id="front-offset-x" value="0" step="0.5" min="-50" max="50" oninput="render()"></div>
+        <div><span class="sb-label">Vertical (↓ down)</span><input type="number" id="front-offset-y" value="0" step="0.5" min="-50" max="50" oninput="render()"></div>
+      </div>
+    </div>
+
+    <hr>
 
     <div class="panel">
       <div class="panel-title">Slip Title</div>
@@ -210,6 +226,16 @@
     </div><!-- /front-panels -->
 
     <div id="back-panels" style="display:none">
+
+    <div class="panel">
+      <div class="panel-title">Back Offset <span id="back-offset-unit-label" style="color:var(--text-muted);text-transform:none;font-weight:600">(mm)</span></div>
+      <div class="margin-grid">
+        <div><span class="sb-label">Horizontal (→ right)</span><input type="number" id="back-offset-x" value="0" step="0.5" min="-50" max="50" oninput="render()"></div>
+        <div><span class="sb-label">Vertical (↓ down)</span><input type="number" id="back-offset-y" value="0" step="0.5" min="-50" max="50" oninput="render()"></div>
+      </div>
+    </div>
+
+    <hr>
 
     <div class="panel">
       <div class="panel-title">Back Design</div>
@@ -292,6 +318,9 @@ const DEFAULTS = {
   backGap:     6,
   backColumns: 2,
   backElements: [],
+  offsetUnit:  'mm',
+  frontOffsetX: 0, frontOffsetY: 0,
+  backOffsetX:  0, backOffsetY:  0,
 };
 
 const STORAGE_KEY = 'karaoke_slips_v1';
@@ -306,6 +335,7 @@ let backElements = [];
 let pendingBackImageAction = null;
 const backImageCache = new Map();
 let showingFace = 'front';
+let offsetUnit = 'mm';
 let fontsReady = false;
 
 // ── Serialise current UI → plain object ──
@@ -335,6 +365,11 @@ function getState() {
     backElements: backElements.map(e => e.type === 'text'
       ? {id:e.id, type:'text', content:e.content, font:e.font, weight:e.weight, color:e.color, align:e.align, size:e.size}
       : {id:e.id, type:'image', src:e.src, fit:e.fit, align:e.align, size:e.size}),
+    offsetUnit:   offsetUnit,
+    frontOffsetX: parseFloat(document.getElementById('front-offset-x')?.value) || 0,
+    frontOffsetY: parseFloat(document.getElementById('front-offset-y')?.value) || 0,
+    backOffsetX:  parseFloat(document.getElementById('back-offset-x')?.value)  || 0,
+    backOffsetY:  parseFloat(document.getElementById('back-offset-y')?.value)  || 0,
   };
 }
 
@@ -397,6 +432,15 @@ function applyState(s) {
     backElements = [];
     set('back-bg', s.backBg || '#ffffff');
   }
+
+  // Print offset
+  offsetUnit = s.offsetUnit || 'mm';
+  set('offset-unit', offsetUnit);
+  set('front-offset-x', s.frontOffsetX || 0);
+  set('front-offset-y', s.frontOffsetY || 0);
+  set('back-offset-x',  s.backOffsetX  || 0);
+  set('back-offset-y',  s.backOffsetY  || 0);
+  updateOffsetUnitUI();
 }
 
 // ── Persistence ──
@@ -439,6 +483,45 @@ function onJSONFileChosen(input) {
 
 function uid() { return '_' + Math.random().toString(36).slice(2,9); }
 function mmToPx(mm) { return mm * 3.7795; }
+
+// ── Front/back print-offset unit handling ──
+function unitToMM(v, u) { return u === 'in' ? v * 25.4 : v; }
+function mmToUnit(mm, u) { return u === 'in' ? mm / 25.4 : mm; }
+
+function updateOffsetUnitUI() {
+  const step  = offsetUnit === 'in' ? 0.02 : 0.5;
+  const range = offsetUnit === 'in' ? 2    : 50;
+  ['front-offset-x','front-offset-y','back-offset-x','back-offset-y'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.step = step; el.min = -range; el.max = range; }
+  });
+  const label = offsetUnit === 'in' ? '(in)' : '(mm)';
+  const fl = document.getElementById('front-offset-unit-label'); if (fl) fl.textContent = label;
+  const bl = document.getElementById('back-offset-unit-label');  if (bl) bl.textContent = label;
+}
+
+function onOffsetUnitChange() {
+  const newUnit = document.getElementById('offset-unit').value;
+  const oldUnit = offsetUnit;
+  const decimals = newUnit === 'in' ? 3 : 1;
+  ['front-offset-x','front-offset-y','back-offset-x','back-offset-y'].forEach(id => {
+    const el = document.getElementById(id);
+    const mm = unitToMM(parseFloat(el.value) || 0, oldUnit);
+    el.value = mmToUnit(mm, newUnit).toFixed(decimals);
+  });
+  offsetUnit = newUnit;
+  updateOffsetUnitUI();
+  persist(); render();
+}
+
+// Current face's print offset, in mm
+function getFaceOffsetMM() {
+  const xId = showingFace === 'front' ? 'front-offset-x' : 'back-offset-x';
+  const yId = showingFace === 'front' ? 'front-offset-y' : 'back-offset-y';
+  const x = parseFloat(document.getElementById(xId)?.value) || 0;
+  const y = parseFloat(document.getElementById(yId)?.value) || 0;
+  return { x: unitToMM(x, offsetUnit), y: unitToMM(y, offsetUnit) };
+}
 
 function getPageDims() {
   let [w,h] = document.getElementById('page-size').value.split(',').map(Number);
@@ -518,6 +601,12 @@ function renderHighRes() {
   pc.width=Math.round(PW); pc.height=Math.round(PH);
   const ctx=pc.getContext('2d');
   ctx.fillStyle='#fff'; ctx.fillRect(0,0,PW,PH);
+
+  // Print-registration offset: shifts the printed content (not the page) for this face
+  const offMM = getFaceOffsetMM();
+  ctx.save();
+  ctx.translate(offMM.x*MPx, offMM.y*MPx);
+
   for(let row=0;row<rows;row++)
     for(let col=0;col<cols;col++){
       const idx=row*cols+col;
@@ -526,6 +615,7 @@ function renderHighRes() {
 
   // Cut lines — MPx scales dash/weight to 300dpi (front only; back is full-bleed artwork)
   if (showingFace === 'front') drawCutLines(ctx, PW, PH, mT, mB, mL, mR, cols, rows, SW, SH, MPx);
+  ctx.restore();
   return {canvas:pc, wMM:w, hMM:h};
 }
 
@@ -786,6 +876,11 @@ function render() {
   ctx.scale(dpr,dpr);
   ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,PW,PH);
 
+  // Print-registration offset: shifts the printed content (not the page) for this face
+  const offMM = getFaceOffsetMM();
+  ctx.save();
+  ctx.translate(mmToPx(offMM.x)*scale, mmToPx(offMM.y)*scale);
+
   for(let row=0;row<rows;row++){
     for(let col=0;col<cols;col++){
       const idx=row*cols+col;
@@ -796,6 +891,7 @@ function render() {
 
   // Cut lines (front only; back is full-bleed artwork)
   if (showingFace === 'front') drawCutLines(ctx, PW, PH, mT, mB, mL, mR, cols, rows, SW, SH, scale);
+  ctx.restore();
 }
 
 // ── Controls ──
