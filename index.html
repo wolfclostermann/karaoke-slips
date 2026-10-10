@@ -63,6 +63,8 @@
   .preview-toolbar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; background: rgba(15,15,19,0.92); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; z-index: 10; backdrop-filter: blur(8px); }
   .flip-btn { padding: 5px 14px; border-radius: 5px; border: 1px solid var(--border); background: none; color: var(--text-muted); font-family: 'Syne', sans-serif; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.12s; }
   .flip-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+  .face-tabs { display: flex; gap: 6px; }
+  .face-tabs .flip-btn { flex: 1; padding: 9px; font-size: 0.85rem; }
   .preview-scroll { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 60px 20px 20px; }
 
   /* Canvas wrapper — shadow only, no CSS sizing interference */
@@ -86,11 +88,9 @@
   <aside class="sidebar">
 
     <div class="panel">
-      <div class="panel-title">Slip Title</div>
-      <div><span class="sb-label">Title text</span><input type="text" id="slip-title" value="Karaoke Request" oninput="render()"></div>
-      <div class="color-row">
-        <div><span class="sb-label">Title BG</span><input type="color" id="title-bg" value="#111111" oninput="render()"></div>
-        <div><span class="sb-label">Title text</span><input type="color" id="title-fg" value="#ffffff" oninput="render()"></div>
+      <div class="face-tabs">
+        <button class="flip-btn active" id="sb-front" onclick="showFace('front')">▣ Front</button>
+        <button class="flip-btn" id="sb-back" onclick="showFace('back')">↺ Back</button>
       </div>
     </div>
 
@@ -134,6 +134,19 @@
       <span class="sb-label">Count <span id="slip-count-label" style="color:var(--accent)">12</span></span>
       <input type="range" id="slip-count" min="1" max="30" value="12" oninput="updateSlipCount()">
       <div style="font-size:.72rem;color:var(--text-muted)" id="grid-info"></div>
+    </div>
+
+    <hr>
+
+    <div id="front-panels">
+
+    <div class="panel">
+      <div class="panel-title">Slip Title</div>
+      <div><span class="sb-label">Title text</span><input type="text" id="slip-title" value="Karaoke Request" oninput="render()"></div>
+      <div class="color-row">
+        <div><span class="sb-label">Title BG</span><input type="color" id="title-bg" value="#111111" oninput="render()"></div>
+        <div><span class="sb-label">Title text</span><input type="color" id="title-fg" value="#ffffff" oninput="render()"></div>
+      </div>
     </div>
 
     <hr>
@@ -194,26 +207,49 @@
       <button class="btn-add-field" onclick="addField()">+ Add field</button>
     </div>
 
-    <hr>
+    </div><!-- /front-panels -->
+
+    <div id="back-panels" style="display:none">
 
     <div class="panel">
       <div class="panel-title">Back Design</div>
-      <div class="back-type-tabs">
-        <button class="back-tab active" data-back-type="plain"  onclick="setBackType('plain',this)">Blank</button>
-        <button class="back-tab"        data-back-type="logo"   onclick="setBackType('logo',this)">Logo / Text</button>
-        <button class="back-tab"        data-back-type="grid"   onclick="setBackType('grid',this)">Grid</button>
-        <button class="back-tab"        data-back-type="lined"  onclick="setBackType('lined',this)">Lined</button>
-      </div>
-      <div id="back-logo-opts" style="display:none;flex-direction:column;gap:8px">
-        <span class="sb-label">Text (↵ for newlines)</span>
-        <textarea id="back-logo-text" placeholder="Your Pub Name&#10;🎤 Karaoke Night" oninput="render()"
-          style="min-height:70px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'DM Mono',monospace;font-size:.8rem;padding:8px;resize:vertical;outline:none;width:100%"></textarea>
-        <div class="color-row">
-          <div><span class="sb-label">BG</span><input type="color" id="back-logo-bg" value="#111111" oninput="render()"></div>
-          <div><span class="sb-label">Text</span><input type="color" id="back-logo-fg" value="#e8ff47" oninput="render()"></div>
+      <div><span class="sb-label">Background texture</span>
+        <div class="back-type-tabs">
+          <button class="back-tab active" data-back-texture="none"  onclick="setBackTexture('none',this)">Blank</button>
+          <button class="back-tab"        data-back-texture="grid"  onclick="setBackTexture('grid',this)">Grid</button>
+          <button class="back-tab"        data-back-texture="lined" onclick="setBackTexture('lined',this)">Lined</button>
         </div>
       </div>
+      <div><span class="sb-label">Background color</span><input type="color" id="back-bg" value="#ffffff" oninput="render()"></div>
+
+      <hr>
+
+      <div><span class="sb-label">Arrangement</span>
+        <select id="back-layout" onchange="onBackLayoutChange()">
+          <option value="stack-v">Stacked (top to bottom)</option>
+          <option value="stack-h">Side by side</option>
+          <option value="grid">Grid</option>
+          <option value="layered">Layered (centred overlap)</option>
+        </select>
+      </div>
+      <div id="back-columns-row" style="display:none;flex-direction:column;gap:3px">
+        <span class="sb-label">Columns <span id="back-columns-val" style="color:var(--accent)">2</span></span>
+        <input type="range" id="back-columns" min="1" max="4" value="2" oninput="updateBackColumns()">
+      </div>
+      <div>
+        <span class="sb-label">Spacing <span id="back-gap-val" style="color:var(--accent)">6%</span></span>
+        <input type="range" id="back-gap" min="0" max="20" value="6" oninput="updateBackGap()">
+      </div>
+
+      <div class="fields-list" id="back-elements-list"></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn-add-field" style="flex:1" onclick="addBackText()">+ Add text</button>
+        <button class="btn-add-field" style="flex:1" onclick="addBackImage()">+ Add image</button>
+      </div>
+      <input type="file" id="back-image-input" accept="image/*" style="display:none" onchange="onBackImageChosen(this)">
     </div>
+
+    </div><!-- /back-panels -->
 
   </aside>
 
@@ -250,16 +286,25 @@ const DEFAULTS = {
   titleFont:   'Syne',
   labelFont:   'Syne',
   hintFont:    'DM Mono',
-  backType:    'plain',
-  backLogoText: '',
-  backLogoBg:  '#111111',
-  backLogoFg:  '#e8ff47',
+  backBg:      '#ffffff',
+  backTexture: 'none',
+  backLayout:  'stack-v',
+  backGap:     6,
+  backColumns: 2,
+  backElements: [],
 };
 
 const STORAGE_KEY = 'karaoke_slips_v1';
+const FONT_CHOICES = ['Syne','Inter','Barlow Condensed','Oswald','Playfair Display','Roboto Slab','Space Mono','DM Mono'];
 
 let fields = [];
-let backType = 'plain';
+let backTexture = 'none';
+let backLayout = 'stack-v';
+let backGap = 6;
+let backColumns = 2;
+let backElements = [];
+let pendingBackImageAction = null;
+const backImageCache = new Map();
 let showingFace = 'front';
 let fontsReady = false;
 
@@ -282,10 +327,14 @@ function getState() {
     labelFont:    document.getElementById('label-font').value,
     hintFont:     document.getElementById('hint-font').value,
     fields:       fields.map(f => ({id:f.id, label:f.label, hint:f.hint})),
-    backType,
-    backLogoText: document.getElementById('back-logo-text')?.value || '',
-    backLogoBg:   document.getElementById('back-logo-bg')?.value  || '#111111',
-    backLogoFg:   document.getElementById('back-logo-fg')?.value  || '#e8ff47',
+    backBg:       document.getElementById('back-bg')?.value || '#ffffff',
+    backTexture,
+    backLayout:   document.getElementById('back-layout')?.value || 'stack-v',
+    backGap:      parseInt(document.getElementById('back-gap')?.value) || 0,
+    backColumns:  parseInt(document.getElementById('back-columns')?.value) || 2,
+    backElements: backElements.map(e => e.type === 'text'
+      ? {id:e.id, type:'text', content:e.content, font:e.font, weight:e.weight, color:e.color, align:e.align, size:e.size}
+      : {id:e.id, type:'image', src:e.src, fit:e.fit, align:e.align, size:e.size}),
   };
 }
 
@@ -308,9 +357,6 @@ function applyState(s) {
   set('title-font',   s.titleFont  || 'Syne');
   set('label-font',   s.labelFont  || 'Syne');
   set('hint-font',    s.hintFont   || 'DM Mono');
-  set('back-logo-text', s.backLogoText);
-  set('back-logo-bg', s.backLogoBg);
-  set('back-logo-fg', s.backLogoFg);
 
   // Sync range display labels
   document.getElementById('slip-count-label').textContent = s.slipCount;
@@ -320,14 +366,37 @@ function applyState(s) {
   // Fields
   fields = (s.fields || []).map(f => ({id: f.id || uid(), label: f.label || '', hint: f.hint || ''}));
 
-  // Back type tabs
-  backType = s.backType || 'plain';
-  document.querySelectorAll('.back-tab').forEach(b => {
-    const type = b.getAttribute('data-back-type');
-    b.classList.toggle('active', type === backType);
+  // Back design
+  backTexture = s.backTexture || (s.backType === 'grid' ? 'grid' : s.backType === 'lined' ? 'lined' : 'none');
+  document.querySelectorAll('[data-back-texture]').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-back-texture') === backTexture);
   });
-  const logoOpts = document.getElementById('back-logo-opts');
-  if (logoOpts) logoOpts.style.display = backType === 'logo' ? 'flex' : 'none';
+
+  backLayout  = s.backLayout || 'stack-v';
+  backGap     = s.backGap ?? 6;
+  backColumns = s.backColumns ?? 2;
+  set('back-layout',  backLayout);
+  set('back-gap',     backGap);
+  set('back-columns', backColumns);
+  document.getElementById('back-gap-val').textContent = backGap + '%';
+  document.getElementById('back-columns-val').textContent = backColumns;
+  document.getElementById('back-columns-row').style.display = backLayout === 'grid' ? 'flex' : 'none';
+
+  if (Array.isArray(s.backElements) && s.backElements.length) {
+    backElements = s.backElements.map(e => ({...e, id: e.id || uid()}));
+    set('back-bg', s.backBg || '#ffffff');
+  } else if (s.backType === 'logo' && s.backLogoText) {
+    // Migrate legacy single logo-text back design into the new elements model
+    backElements = [{
+      id: uid(), type: 'text', content: s.backLogoText,
+      font: s.titleFont || 'Syne', weight: '800',
+      color: s.backLogoFg || '#e8ff47', align: 'center', size: 130,
+    }];
+    set('back-bg', s.backLogoBg || '#111111');
+  } else {
+    backElements = [];
+    set('back-bg', s.backBg || '#ffffff');
+  }
 }
 
 // ── Persistence ──
@@ -357,6 +426,7 @@ function onJSONFileChosen(input) {
       const s = JSON.parse(e.target.result);
       applyState(s);
       renderFieldsList();
+      renderBackElementsList();
       render();
       persist();
     } catch(err) {
@@ -454,8 +524,8 @@ function renderHighRes() {
       if(idx<count) drawSlipOnCtx(ctx,mL+col*SW,mT+row*SH,SW,SH,showingFace==='front');
     }
 
-  // Cut lines — MPx scales dash/weight to 300dpi
-  drawCutLines(ctx, PW, PH, mT, mB, mL, mR, cols, rows, SW, SH, MPx);
+  // Cut lines — MPx scales dash/weight to 300dpi (front only; back is full-bleed artwork)
+  if (showingFace === 'front') drawCutLines(ctx, PW, PH, mT, mB, mL, mR, cols, rows, SW, SH, MPx);
   return {canvas:pc, wMM:w, hMM:h};
 }
 
@@ -480,6 +550,123 @@ function printSlips() {
       if (btn) btn.textContent = origLabel;
     }
   }, 50);
+}
+
+// ── Back-of-slip element image cache ──
+function getBackImage(src) {
+  if (!src) return null;
+  if (backImageCache.has(src)) return backImageCache.get(src);
+  const img = new Image();
+  img.onload = () => render();
+  img.src = src;
+  backImageCache.set(src, img);
+  return img;
+}
+
+// ── Measure a back element's natural box size (pre-layout) ──
+function measureBackElement(ctx, el, baseFs, availW) {
+  const sizePct = (el.size||100)/100;
+  if (el.type === 'text') {
+    const fs = baseFs * 1.05 * sizePct;
+    const lineH = fs * 1.35;
+    const lines = (el.content||'').split('\n');
+    ctx.font = `${el.weight||'800'} ${fs}px '${el.font||'Syne'}',sans-serif`;
+    let maxW = 0;
+    lines.forEach(l => { maxW = Math.max(maxW, ctx.measureText(l).width); });
+    return { el, w: Math.min(maxW, availW), h: lines.length*lineH, fs, lineH, lines };
+  }
+  const img = getBackImage(el.src);
+  const aspect = (img && img.naturalWidth) ? img.naturalWidth/img.naturalHeight : 1;
+  const w = availW * 0.55 * sizePct;
+  const h = (el.fit === 'cover') ? w : w/aspect;
+  return { el, w, h, img };
+}
+
+// ── Arrange measured back elements into final boxes per layout mode ──
+function layoutBackElements(ctx, elements, cx, cy, cw, ch, baseFs, layout, gapPct, columns) {
+  const gap = Math.min(cw,ch) * (gapPct/100);
+  const boxes = [];
+
+  if (layout === 'stack-h') {
+    const measures = elements.map(el => measureBackElement(ctx, el, baseFs, cw));
+    const totalW = measures.reduce((s,m)=>s+m.w,0) + gap*(measures.length-1);
+    const rowH = Math.max(1, ...measures.map(m=>m.h));
+    let bx = cx + (cw-totalW)/2;
+    measures.forEach(m => {
+      let by;
+      if (m.el.align === 'start') by = cy;
+      else if (m.el.align === 'end') by = cy + ch - m.h;
+      else by = cy + (rowH-m.h)/2;
+      boxes.push({...m, x:bx, y:by});
+      bx += m.w + gap;
+    });
+  } else if (layout === 'grid') {
+    const cols = Math.max(1, columns||2);
+    const colW = (cw - gap*(cols-1)) / cols;
+    const measures = elements.map(el => measureBackElement(ctx, el, baseFs, colW));
+    const rows = [];
+    for (let i=0;i<measures.length;i+=cols) rows.push(measures.slice(i,i+cols));
+    const rowHeights = rows.map(r => Math.max(1, ...r.map(m=>m.h)));
+    const totalH = rowHeights.reduce((s,h)=>s+h,0) + gap*(rows.length-1);
+    let ry = cy + (ch-totalH)/2;
+    rows.forEach((row,ri) => {
+      const rh = rowHeights[ri];
+      let rx = cx + (cw - (row.length*colW + (row.length-1)*gap))/2;
+      row.forEach(m => {
+        boxes.push({...m, x: rx+(colW-m.w)/2, y: ry+(rh-m.h)/2});
+        rx += colW + gap;
+      });
+      ry += rh + gap;
+    });
+  } else if (layout === 'layered') {
+    const measures = elements.map(el => measureBackElement(ctx, el, baseFs, cw));
+    measures.forEach(m => boxes.push({...m, x:cx+(cw-m.w)/2, y:cy+(ch-m.h)/2}));
+  } else { // stack-v
+    const measures = elements.map(el => measureBackElement(ctx, el, baseFs, cw));
+    const totalH = measures.reduce((s,m)=>s+m.h,0) + gap*(measures.length-1);
+    let by = cy + (ch-totalH)/2;
+    measures.forEach(m => {
+      let bx;
+      if (m.el.align === 'start') bx = cx;
+      else if (m.el.align === 'end') bx = cx + cw - m.w;
+      else bx = cx + (cw-m.w)/2;
+      boxes.push({...m, x:bx, y:by});
+      by += m.h + gap;
+    });
+  }
+  return boxes;
+}
+
+// ── Paint one laid-out back element box ──
+function drawBackElementBox(ctx, b) {
+  const el = b.el;
+  if (el.type === 'text') {
+    ctx.save();
+    ctx.fillStyle = hexToRgb(el.color || '#000000');
+    ctx.font = `${el.weight||'800'} ${b.fs}px '${el.font||'Syne'}',sans-serif`;
+    ctx.textBaseline = 'top';
+    let tx;
+    const align = el.align || 'center';
+    if (align === 'start') { ctx.textAlign='left'; tx=b.x; }
+    else if (align === 'end') { ctx.textAlign='right'; tx=b.x+b.w; }
+    else { ctx.textAlign='center'; tx=b.x+b.w/2; }
+    b.lines.forEach((line,li) => ctx.fillText(line, tx, b.y + li*b.lineH));
+    ctx.restore();
+  } else if (el.type === 'image' && b.img && b.img.complete && b.img.naturalWidth) {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(b.x,b.y,b.w,b.h); ctx.clip();
+    const iw=b.img.naturalWidth, ih=b.img.naturalHeight;
+    let dw,dh,dx,dy;
+    if (el.fit === 'cover') {
+      const boxAspect=b.w/b.h, imgAspect=iw/ih;
+      if (imgAspect>boxAspect) { dh=b.h; dw=dh*imgAspect; } else { dw=b.w; dh=dw/imgAspect; }
+      dx=b.x+(b.w-dw)/2; dy=b.y+(b.h-dh)/2;
+    } else {
+      dw=b.w; dh=b.h; dx=b.x; dy=b.y;
+    }
+    ctx.drawImage(b.img,dx,dy,dw,dh);
+    ctx.restore();
+  }
 }
 
 // ── drawSlip abstracted to accept any ctx ──
@@ -551,35 +738,24 @@ function drawSlipOnCtx(ctx, x, y, SW, SH, isFront) {
       ctx.restore();
     });
   } else {
-    const logoBg = hexToRgb(document.getElementById('back-logo-bg')?.value||'#111111');
-    const logoFg = hexToRgb(document.getElementById('back-logo-fg')?.value||'#e8ff47');
-    const logoText = document.getElementById('back-logo-text')?.value||'';
-    if(backType==='plain'){
-      ctx.fillStyle='#ffffff'; ctx.fillRect(x,y,SW,SH);
-    } else if(backType==='logo'){
-      ctx.fillStyle=logoBg; ctx.fillRect(x,y,SW,SH);
-      const lines=logoText.split('\n').filter(l=>l.trim());
-      if(lines.length>0){
-        const logoFs=baseFs*1.3;
-        const lineH=logoFs*1.4;
-        const totalH=lines.length*lineH;
-        const startY=y+SH/2-totalH/2+logoFs/2;
-        ctx.fillStyle=logoFg;
-        ctx.font=`800 ${logoFs}px '${titleFont}',sans-serif`;
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        lines.forEach((line,li)=>ctx.fillText(line,x+SW/2,startY+li*lineH));
-      }
-    } else if(backType==='grid'){
-      ctx.fillStyle='#ffffff'; ctx.fillRect(x,y,SW,SH);
+    const backBg = hexToRgb(document.getElementById('back-bg')?.value || '#ffffff');
+    ctx.fillStyle=backBg; ctx.fillRect(x,y,SW,SH);
+
+    if (backTexture === 'grid') {
       const gs=Math.max(5,SW*0.08);
       ctx.strokeStyle='#dddddd'; ctx.lineWidth=0.5;
       for(let gx=x;gx<=x+SW;gx+=gs){ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx,y+SH);ctx.stroke();}
       for(let gy=y;gy<=y+SH;gy+=gs){ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x+SW,gy);ctx.stroke();}
-    } else if(backType==='lined'){
-      ctx.fillStyle='#ffffff'; ctx.fillRect(x,y,SW,SH);
+    } else if (backTexture === 'lined') {
       const lh=Math.max(10,SH*0.12);
       ctx.strokeStyle='#cccccc'; ctx.lineWidth=0.5;
       for(let ly=y+lh;ly<y+SH;ly+=lh){ctx.beginPath();ctx.moveTo(x,ly);ctx.lineTo(x+SW,ly);ctx.stroke();}
+    }
+
+    if (backElements.length) {
+      const padX=SW*0.08, padY=SH*0.08;
+      const boxes = layoutBackElements(ctx, backElements, x+padX, y+padY, SW-padX*2, SH-padY*2, baseFs, backLayout, backGap, backColumns);
+      boxes.forEach(b => drawBackElementBox(ctx, b));
     }
   }
   ctx.restore();
@@ -618,8 +794,8 @@ function render() {
     }
   }
 
-  // Cut lines
-  drawCutLines(ctx, PW, PH, mT, mB, mL, mR, cols, rows, SW, SH, scale);
+  // Cut lines (front only; back is full-bleed artwork)
+  if (showingFace === 'front') drawCutLines(ctx, PW, PH, mT, mB, mL, mR, cols, rows, SW, SH, scale);
 }
 
 // ── Controls ──
@@ -631,14 +807,153 @@ function showFace(face) {
   showingFace=face;
   document.getElementById('btn-front').classList.toggle('active',face==='front');
   document.getElementById('btn-back').classList.toggle('active', face==='back');
+  document.getElementById('sb-front').classList.toggle('active',face==='front');
+  document.getElementById('sb-back').classList.toggle('active', face==='back');
+  document.getElementById('front-panels').style.display = face==='front' ? '' : 'none';
+  document.getElementById('back-panels').style.display  = face==='back'  ? '' : 'none';
   render();
 }
 
-function setBackType(type,btn) {
-  backType=type;
-  document.querySelectorAll('.back-tab').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
-  document.getElementById('back-logo-opts').style.display=type==='logo'?'flex':'none';
+function setBackTexture(type,btn) {
+  backTexture=type;
+  document.querySelectorAll('[data-back-texture]').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
   persist(); render();
+}
+
+function onBackLayoutChange() {
+  backLayout=document.getElementById('back-layout').value;
+  document.getElementById('back-columns-row').style.display = backLayout==='grid' ? 'flex' : 'none';
+  persist(); render();
+}
+function updateBackColumns() {
+  backColumns=parseInt(document.getElementById('back-columns').value);
+  document.getElementById('back-columns-val').textContent=backColumns;
+  persist(); render();
+}
+function updateBackGap() {
+  backGap=parseInt(document.getElementById('back-gap').value);
+  document.getElementById('back-gap-val').textContent=backGap+'%';
+  persist(); render();
+}
+
+// ── Back elements (text & image) ──
+function addBackText() {
+  backElements.push({id:uid(), type:'text', content:'Your Pub Name', font:'Syne', weight:'800', color:'#111111', align:'center', size:100});
+  renderBackElementsList(); persist(); render();
+}
+function addBackImage() {
+  pendingBackImageAction={mode:'add'};
+  document.getElementById('back-image-input').click();
+}
+function replaceBackImage(id) {
+  pendingBackImageAction={mode:'replace', id};
+  document.getElementById('back-image-input').click();
+}
+function onBackImageChosen(input) {
+  const file=input.files[0];
+  if (!file) return;
+  const reader=new FileReader();
+  reader.onload = e => {
+    const src=e.target.result;
+    if (pendingBackImageAction?.mode==='replace') {
+      const el=backElements.find(x=>x.id===pendingBackImageAction.id);
+      if (el) el.src=src;
+    } else {
+      backElements.push({id:uid(), type:'image', src, size:100, fit:'contain', align:'center'});
+    }
+    pendingBackImageAction=null;
+    renderBackElementsList(); persist(); render();
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+function removeBackElement(id) {
+  backElements=backElements.filter(x=>x.id!==id);
+  renderBackElementsList(); persist(); render();
+}
+function updateBackElement(id,key,val) {
+  const el=backElements.find(x=>x.id===id);
+  if (el) { el[key]=val; persist(); render(); }
+}
+
+function renderBackElementsList() {
+  const list=document.getElementById('back-elements-list');
+  list.innerHTML='';
+  backElements.forEach(el=>{
+    const wrap=document.createElement('div');
+    wrap.className='field-item'; wrap.draggable=true;
+    if (el.type==='text') {
+      wrap.innerHTML=`
+        <div class="field-item-header">
+          <span class="drag-handle">⠿</span>
+          <span style="flex:1;font-size:.68rem;letter-spacing:.08em;color:var(--text-muted);font-weight:700">TEXT</span>
+          <button class="btn-remove" onclick="removeBackElement('${el.id}')">✕</button>
+        </div>
+        <textarea oninput="updateBackElement('${el.id}','content',this.value)" placeholder="Text (↵ for newlines)"
+          style="min-height:48px;width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'DM Mono',monospace;font-size:.78rem;padding:6px 8px;resize:vertical;outline:none">${(el.content||'').replace(/</g,'&lt;')}</textarea>
+        <div class="margin-grid">
+          <select onchange="updateBackElement('${el.id}','font',this.value)">
+            ${FONT_CHOICES.map(f=>`<option value="${f}" ${f===el.font?'selected':''}>${f}</option>`).join('')}
+          </select>
+          <select onchange="updateBackElement('${el.id}','weight',this.value)">
+            <option value="400" ${el.weight==='400'?'selected':''}>Normal</option>
+            <option value="700" ${el.weight==='700'?'selected':''}>Bold</option>
+            <option value="800" ${el.weight==='800'?'selected':''}>Extra Bold</option>
+          </select>
+        </div>
+        <div class="margin-grid">
+          <select onchange="updateBackElement('${el.id}','align',this.value)">
+            <option value="start"  ${el.align==='start' ?'selected':''}>Left</option>
+            <option value="center" ${el.align==='center'?'selected':''}>Center</option>
+            <option value="end"    ${el.align==='end'   ?'selected':''}>Right</option>
+          </select>
+          <input type="color" value="${el.color||'#111111'}" onchange="updateBackElement('${el.id}','color',this.value)">
+        </div>
+        <div>
+          <span class="sb-label">Size <span id="size-val-${el.id}" style="color:var(--accent)">${el.size}%</span></span>
+          <input type="range" min="40" max="220" value="${el.size}" oninput="document.getElementById('size-val-${el.id}').textContent=this.value+'%'; updateBackElement('${el.id}','size',parseInt(this.value))">
+        </div>`;
+    } else {
+      wrap.innerHTML=`
+        <div class="field-item-header">
+          <span class="drag-handle">⠿</span>
+          <span style="flex:1;font-size:.68rem;letter-spacing:.08em;color:var(--text-muted);font-weight:700">IMAGE</span>
+          <button class="btn-remove" onclick="removeBackElement('${el.id}')">✕</button>
+        </div>
+        <div style="display:flex;gap:9px;align-items:center">
+          <img src="${el.src}" style="width:42px;height:42px;object-fit:cover;border-radius:5px;border:1px solid var(--border);background:#fff">
+          <button class="btn btn-secondary btn-sm" onclick="replaceBackImage('${el.id}')">Change image</button>
+        </div>
+        <div class="margin-grid">
+          <select onchange="updateBackElement('${el.id}','fit',this.value)">
+            <option value="contain" ${el.fit==='contain'?'selected':''}>Fit (contain)</option>
+            <option value="cover"   ${el.fit==='cover'  ?'selected':''}>Fill (cover)</option>
+          </select>
+          <select onchange="updateBackElement('${el.id}','align',this.value)">
+            <option value="start"  ${el.align==='start' ?'selected':''}>Left</option>
+            <option value="center" ${el.align==='center'?'selected':''}>Center</option>
+            <option value="end"    ${el.align==='end'   ?'selected':''}>Right</option>
+          </select>
+        </div>
+        <div>
+          <span class="sb-label">Size <span id="size-val-${el.id}" style="color:var(--accent)">${el.size}%</span></span>
+          <input type="range" min="20" max="220" value="${el.size}" oninput="document.getElementById('size-val-${el.id}').textContent=this.value+'%'; updateBackElement('${el.id}','size',parseInt(this.value))">
+        </div>`;
+    }
+    wrap.addEventListener('dragstart', e=>{e.dataTransfer.setData('text/plain', el.id); wrap.classList.add('dragging');});
+    wrap.addEventListener('dragend', ()=>wrap.classList.remove('dragging'));
+    wrap.addEventListener('dragover', e=>{e.preventDefault(); wrap.classList.add('drag-over');});
+    wrap.addEventListener('dragleave', ()=>wrap.classList.remove('drag-over'));
+    wrap.addEventListener('drop', e=>{
+      e.preventDefault(); wrap.classList.remove('drag-over');
+      const did=e.dataTransfer.getData('text/plain');
+      if (did===el.id) return;
+      const fi=backElements.findIndex(x=>x.id===did), ti=backElements.findIndex(x=>x.id===el.id);
+      const [mv]=backElements.splice(fi,1); backElements.splice(ti,0,mv);
+      renderBackElementsList(); persist(); render();
+    });
+    list.appendChild(wrap);
+  });
 }
 
 function renderFieldsList() {
@@ -692,6 +1007,7 @@ function init() {
 
   applyState(state);
   renderFieldsList();
+  renderBackElementsList();
   render();
 }
 
